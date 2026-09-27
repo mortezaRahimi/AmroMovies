@@ -1,33 +1,38 @@
 package com.mortex.amromovies.core.data
 
 import com.mortex.amromovies.core.common.time.AppClock
-import com.mortex.amromovies.core.database.MoviesLocalDataSource
+import com.mortex.amromovies.core.data.mapper.toCached
+import com.mortex.amromovies.core.data.mapper.toDomain
+import com.mortex.amromovies.core.data.source.MoviesLocalDataSource
+import com.mortex.amromovies.core.data.source.MoviesRemoteDataSource
+import com.mortex.amromovies.core.data.source.RemoteDataException
+import com.mortex.amromovies.core.data.source.model.RemoteGenre
 import com.mortex.amromovies.core.domain.model.Genre
 import com.mortex.amromovies.core.domain.model.Movie
 import com.mortex.amromovies.core.domain.model.MovieDetails
 import com.mortex.amromovies.core.domain.repository.MoviesRepository
 import com.mortex.amromovies.core.domain.result.AppError
 import com.mortex.amromovies.core.domain.result.AppResult
-import com.mortex.amromovies.core.network.TmdbRemoteDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import retrofit2.HttpException
-import java.io.IOException
 
 class DefaultMoviesRepository(
-    private val remoteDataSource: TmdbRemoteDataSource,
+    private val remoteDataSource: MoviesRemoteDataSource,
     private val localDataSource: MoviesLocalDataSource,
     private val clock: AppClock,
 ) : MoviesRepository {
     private val refreshMutex = Mutex()
 
     override fun observeWeeklyTrendingMovies(): Flow<List<Movie>> =
-        localDataSource.observeWeeklyTrendingMovies()
+        localDataSource.observeWeeklyTrendingMovies().map { movies ->
+            movies.map { movie -> movie.toDomain() }
+        }
 
     override suspend fun refreshWeeklyTrendingMovies(force: Boolean): AppResult<Unit> = executeSafely {
         val timestampObservedBeforeLock = localDataSource.getWeeklyTrendingUpdatedAt()
@@ -40,7 +45,7 @@ class DefaultMoviesRepository(
 
             val movies = fetchWeeklyTrendingMovies()
             localDataSource.replaceWeeklyTrendingMovies(
-                movies = movies,
+                movies = movies.map(Movie::toCached),
                 refreshedAtEpochMillis = clock.nowEpochMillis(),
             )
         }
@@ -48,12 +53,15 @@ class DefaultMoviesRepository(
 
     private suspend fun fetchWeeklyTrendingMovies(): List<Movie> {
         val genres = remoteDataSource.getGenres()
+        val genresById = genres.associateBy(RemoteGenre::id)
         val firstPage = remoteDataSource.getWeeklyTrendingMoviesPage(
             page = FIRST_PAGE,
-            genres = genres,
         )
         val moviesById = LinkedHashMap<Long, Movie>(MAX_TRENDING_MOVIES)
-        firstPage.movies.forEach { movie -> moviesById.putIfAbsent(movie.id, movie) }
+        firstPage.movies.forEach { movie ->
+            val domainMovie = movie.toDomain(genresById)
+            moviesById.putIfAbsent(domainMovie.id, domainMovie)
+        }
 
         var nextPage = FIRST_PAGE + 1
         while (moviesById.size < MAX_TRENDING_MOVIES && nextPage <= firstPage.totalPages) {
@@ -67,7 +75,6 @@ class DefaultMoviesRepository(
                         async {
                             remoteDataSource.getWeeklyTrendingMoviesPage(
                                 page = page,
-                                genres = genres,
                             )
                         }
                     }
@@ -75,7 +82,10 @@ class DefaultMoviesRepository(
             }
 
             pages.forEach { page ->
-                page.movies.forEach { movie -> moviesById.putIfAbsent(movie.id, movie) }
+                page.movies.forEach { movie ->
+                    val domainMovie = movie.toDomain(genresById)
+                    moviesById.putIfAbsent(domainMovie.id, domainMovie)
+                }
             }
             nextPage = batchLastPage + 1
         }
@@ -84,29 +94,29 @@ class DefaultMoviesRepository(
     }
 
     override suspend fun getGenres(): AppResult<List<Genre>> = executeSafely {
-        remoteDataSource.getGenres()
+        remoteDataSource.getGenres().map(RemoteGenre::toDomain)
     }
 
     override suspend fun getMovieDetails(movieId: Long): AppResult<MovieDetails> = executeSafely {
-        remoteDataSource.getMovieDetails(movieId)
+        remoteDataSource.getMovieDetails(movieId).toDomain()
     }
 
     private suspend fun <T> executeSafely(block: suspend () -> T): AppResult<T> = try {
         AppResult.Success(block())
     } catch (cancellation: CancellationException) {
         throw cancellation
-    } catch (_: IOException) {
-        AppResult.Error(AppError.NoInternet)
-    } catch (http: HttpException) {
-        AppResult.Error(http.toAppError())
+    } catch (remote: RemoteDataException) {
+        AppResult.Error(remote.toAppError())
     } catch (unexpected: Exception) {
         AppResult.Error(AppError.Unknown(unexpected))
     }
 
-    private fun HttpException.toAppError(): AppError = when (code()) {
-        HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> AppError.Unauthorized
-        HTTP_NOT_FOUND -> AppError.NotFound
-        else -> AppError.Server(statusCode = code())
+    private fun RemoteDataException.toAppError(): AppError = when (this) {
+        is RemoteDataException.NoInternet -> AppError.NoInternet
+        RemoteDataException.Unauthorized -> AppError.Unauthorized
+        RemoteDataException.NotFound -> AppError.NotFound
+        is RemoteDataException.Server -> AppError.Server(statusCode)
+        is RemoteDataException.InvalidResponse -> AppError.Unknown(cause)
     }
 
     private fun Long?.isFresh(): Boolean =
@@ -117,8 +127,5 @@ class DefaultMoviesRepository(
         const val MAX_TRENDING_MOVIES = 100
         const val PAGE_BATCH_SIZE = 4
         const val CACHE_MAX_AGE_MILLIS = 60 * 60 * 1_000L
-        const val HTTP_UNAUTHORIZED = 401
-        const val HTTP_FORBIDDEN = 403
-        const val HTTP_NOT_FOUND = 404
     }
 }

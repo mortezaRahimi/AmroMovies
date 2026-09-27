@@ -6,29 +6,29 @@ import com.mortex.amromovies.core.database.entity.MovieEntity
 import com.mortex.amromovies.core.database.entity.MovieGenreCrossRef
 import com.mortex.amromovies.core.database.entity.TrendingMovieEntity
 import com.mortex.amromovies.core.database.entity.TrendingMovieWithGenres
-import com.mortex.amromovies.core.domain.model.Genre
-import com.mortex.amromovies.core.domain.model.Movie
+import com.mortex.amromovies.core.data.source.MoviesLocalDataSource
+import com.mortex.amromovies.core.data.source.model.CachedGenre
+import com.mortex.amromovies.core.data.source.model.CachedMovie
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
 
 internal class RoomMoviesLocalDataSource(
     private val database: AmroMoviesDatabase,
 ) : MoviesLocalDataSource {
     private val dao = database.moviesDao()
 
-    override fun observeWeeklyTrendingMovies(): Flow<List<Movie>> =
+    override fun observeWeeklyTrendingMovies(): Flow<List<CachedMovie>> =
         dao.observeWeeklyTrendingMovies().map { movies ->
-            movies.map { movie -> movie.toDomain() }
+            movies.map { movie -> movie.toCached() }
         }
 
     override suspend fun replaceWeeklyTrendingMovies(
-        movies: List<Movie>,
+        movies: List<CachedMovie>,
         refreshedAtEpochMillis: Long,
     ) {
         val genres = movies
-            .flatMap(Movie::genres)
-            .distinctBy(Genre::id)
+            .flatMap(CachedMovie::genres)
+            .distinctBy(CachedGenre::id)
             .map { genre -> genre.toEntity() }
         val movieGenreRefs = movies.flatMap { movie ->
             movie.genres.map { genre ->
@@ -52,14 +52,14 @@ internal class RoomMoviesLocalDataSource(
     override suspend fun getWeeklyTrendingUpdatedAt(): Long? =
         dao.getCacheUpdatedAt(WEEKLY_TRENDING_CACHE_KEY)
 
-    private fun Movie.toEntity() = MovieEntity(
+    private fun CachedMovie.toEntity() = MovieEntity(
         id = id,
         title = title,
         originalTitle = originalTitle,
         overview = overview,
         posterPath = posterPath,
         backdropPath = backdropPath,
-        releaseDateEpochDay = releaseDate?.toEpochDay(),
+        releaseDateEpochDay = releaseDateEpochDay,
         originalLanguage = originalLanguage,
         popularity = popularity,
         rating = rating,
@@ -67,17 +67,17 @@ internal class RoomMoviesLocalDataSource(
         isAdult = isAdult,
     )
 
-    private fun Genre.toEntity() = GenreEntity(id = id, name = name)
+    private fun CachedGenre.toEntity() = GenreEntity(id = id, name = name)
 
-    private fun TrendingMovieWithGenres.toDomain() = Movie(
+    private fun TrendingMovieWithGenres.toCached() = CachedMovie(
         id = movie.id,
         title = movie.title,
         originalTitle = movie.originalTitle,
         overview = movie.overview,
         posterPath = movie.posterPath,
         backdropPath = movie.backdropPath,
-        genres = genres.map { genre -> Genre(id = genre.id, name = genre.name) },
-        releaseDate = movie.releaseDateEpochDay?.let(LocalDate::ofEpochDay),
+        genres = genres.map { genre -> CachedGenre(id = genre.id, name = genre.name) },
+        releaseDateEpochDay = movie.releaseDateEpochDay,
         originalLanguage = movie.originalLanguage,
         popularity = movie.popularity,
         rating = movie.rating,

@@ -3,8 +3,9 @@ package com.mortex.amromovies.core.database
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.mortex.amromovies.core.domain.model.Genre
-import com.mortex.amromovies.core.domain.model.Movie
+import com.mortex.amromovies.core.data.source.MoviesLocalDataSource
+import com.mortex.amromovies.core.data.source.model.CachedGenre
+import com.mortex.amromovies.core.data.source.model.CachedMovie
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -42,9 +43,9 @@ class RoomMoviesLocalDataSourceTest {
         localDataSource.replaceWeeklyTrendingMovies(movies, refreshedAtEpochMillis = 1234L)
 
         val cached = localDataSource.observeWeeklyTrendingMovies().first()
-        assertEquals(listOf(30L, 10L, 20L), cached.map(Movie::id))
+        assertEquals(listOf(30L, 10L, 20L), cached.map(CachedMovie::id))
         assertEquals(listOf("Comedy", "Drama", "Action"), cached.map { it.genres.single().name })
-        assertEquals(LocalDate.of(2025, 1, 2), cached.first().releaseDate)
+        assertEquals(LocalDate.of(2025, 1, 2).toEpochDay(), cached.first().releaseDateEpochDay)
         assertEquals(1234L, localDataSource.getWeeklyTrendingUpdatedAt())
     }
 
@@ -61,19 +62,19 @@ class RoomMoviesLocalDataSourceTest {
         )
 
         val cached = localDataSource.observeWeeklyTrendingMovies().first()
-        assertEquals(listOf(3L, 4L), cached.map(Movie::id))
+        assertEquals(listOf(3L, 4L), cached.map(CachedMovie::id))
         assertEquals(200L, localDataSource.getWeeklyTrendingUpdatedAt())
     }
 
-    private fun movie(id: Long, genreName: String) = Movie(
+    private fun movie(id: Long, genreName: String) = CachedMovie(
         id = id,
         title = "Movie $id",
         originalTitle = "Original $id",
         overview = "Overview $id",
         posterPath = "/$id.jpg",
         backdropPath = null,
-        genres = listOf(Genre(id = id.toInt(), name = genreName)),
-        releaseDate = LocalDate.of(2025, 1, 2),
+        genres = listOf(CachedGenre(id = id.toInt(), name = genreName)),
+        releaseDateEpochDay = LocalDate.of(2025, 1, 2).toEpochDay(),
         originalLanguage = "en",
         popularity = id.toDouble(),
         rating = 7.5,

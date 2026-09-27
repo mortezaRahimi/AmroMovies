@@ -8,7 +8,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)

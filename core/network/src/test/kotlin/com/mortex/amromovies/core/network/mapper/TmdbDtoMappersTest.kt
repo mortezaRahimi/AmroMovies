@@ -1,18 +1,15 @@
 package com.mortex.amromovies.core.network.mapper
 
-import com.mortex.amromovies.core.domain.model.Genre
 import com.mortex.amromovies.core.network.model.GenreDto
 import com.mortex.amromovies.core.network.model.MovieDetailsDto
 import com.mortex.amromovies.core.network.model.TrendingMovieDto
 import com.mortex.amromovies.core.network.model.TrendingMoviesResponseDto
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.LocalDate
 
 class TmdbDtoMappersTest {
     @Test
-    fun `trending mapper resolves known genres and ignores unknown ids`() {
+    fun `trending mapper preserves API ordering and genre ids`() {
         val response = TrendingMoviesResponseDto(
             page = 1,
             results = listOf(trendingMovie(genreIds = listOf(28, 999, 18))),
@@ -20,18 +17,14 @@ class TmdbDtoMappersTest {
             totalResults = 1,
         )
 
-        val movies = response.toDomain(
-            genres = listOf(
-                Genre(id = 18, name = "Drama"),
-                Genre(id = 28, name = "Action"),
-            ),
-        )
+        val page = response.toRemote()
 
-        assertEquals(listOf("Action", "Drama"), movies.single().genres.map(Genre::name))
+        assertEquals(1, page.page)
+        assertEquals(listOf(28, 999, 18), page.movies.single().genreIds)
     }
 
     @Test
-    fun `trending mapper converts valid release date`() {
+    fun `trending mapper keeps release date as transport data`() {
         val response = TrendingMoviesResponseDto(
             page = 1,
             results = listOf(trendingMovie(releaseDate = "2025-06-13")),
@@ -39,13 +32,13 @@ class TmdbDtoMappersTest {
             totalResults = 1,
         )
 
-        val movie = response.toDomain(genres = emptyList()).single()
+        val movie = response.toRemote().movies.single()
 
-        assertEquals(LocalDate.of(2025, 6, 13), movie.releaseDate)
+        assertEquals("2025-06-13", movie.releaseDate)
     }
 
     @Test
-    fun `invalid or absent release dates map to null`() {
+    fun `network mapper does not apply domain date policy`() {
         val trendingResponse = TrendingMoviesResponseDto(
             page = 1,
             results = listOf(trendingMovie(releaseDate = "not-a-date")),
@@ -54,19 +47,19 @@ class TmdbDtoMappersTest {
         )
         val details = movieDetails(releaseDate = "")
 
-        assertNull(trendingResponse.toDomain(emptyList()).single().releaseDate)
-        assertNull(details.toDomain().releaseDate)
+        assertEquals("not-a-date", trendingResponse.toRemote().movies.single().releaseDate)
+        assertEquals("", details.toRemote().releaseDate)
     }
 
     @Test
     fun `movie details mapper preserves detail fields and genres`() {
         val details = movieDetails(releaseDate = "1977-05-25")
 
-        val movie = details.toDomain()
+        val movie = details.toRemote()
 
         assertEquals(121, movie.runtimeMinutes)
         assertEquals("Science Fiction", movie.genres.single().name)
-        assertEquals(LocalDate.of(1977, 5, 25), movie.releaseDate)
+        assertEquals("1977-05-25", movie.releaseDate)
         assertEquals("tt0076759", movie.imdbId)
     }
 

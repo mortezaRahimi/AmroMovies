@@ -1,37 +1,38 @@
 package com.mortex.amromovies.core.network.mapper
 
-import com.mortex.amromovies.core.domain.model.Genre
-import com.mortex.amromovies.core.domain.model.Movie
-import com.mortex.amromovies.core.domain.model.MovieDetails
+import com.mortex.amromovies.core.data.source.model.RemoteGenre
+import com.mortex.amromovies.core.data.source.model.RemoteMovie
+import com.mortex.amromovies.core.data.source.model.RemoteMovieDetails
+import com.mortex.amromovies.core.data.source.model.RemoteTrendingMoviesPage
 import com.mortex.amromovies.core.network.model.GenreDto
 import com.mortex.amromovies.core.network.model.GenreListResponseDto
 import com.mortex.amromovies.core.network.model.MovieDetailsDto
 import com.mortex.amromovies.core.network.model.TrendingMovieDto
 import com.mortex.amromovies.core.network.model.TrendingMoviesResponseDto
-import java.time.LocalDate
-import java.time.format.DateTimeParseException
 
-internal fun GenreDto.toDomain(): Genre = Genre(
+internal fun GenreDto.toRemote(): RemoteGenre = RemoteGenre(
     id = id,
     name = name,
 )
 
-internal fun GenreListResponseDto.toDomain(): List<Genre> = genres.map(GenreDto::toDomain)
+internal fun GenreListResponseDto.toRemote(): List<RemoteGenre> = genres.map(GenreDto::toRemote)
 
-internal fun TrendingMoviesResponseDto.toDomain(genres: List<Genre>): List<Movie> {
-    val genresById = genres.associateBy(Genre::id)
-    return results.map { movie -> movie.toDomain(genresById) }
-}
+internal fun TrendingMoviesResponseDto.toRemote(): RemoteTrendingMoviesPage =
+    RemoteTrendingMoviesPage(
+        page = page,
+        totalPages = totalPages,
+        movies = results.map(TrendingMovieDto::toRemote),
+    )
 
-private fun TrendingMovieDto.toDomain(genresById: Map<Int, Genre>): Movie = Movie(
+private fun TrendingMovieDto.toRemote(): RemoteMovie = RemoteMovie(
     id = id,
     title = title,
     originalTitle = originalTitle,
     overview = overview,
     posterPath = posterPath,
     backdropPath = backdropPath,
-    genres = genreIds.mapNotNull(genresById::get),
-    releaseDate = releaseDate.toLocalDateOrNull(),
+    genreIds = genreIds,
+    releaseDate = releaseDate,
     originalLanguage = originalLanguage,
     popularity = popularity,
     rating = voteAverage,
@@ -39,7 +40,7 @@ private fun TrendingMovieDto.toDomain(genresById: Map<Int, Genre>): Movie = Movi
     isAdult = adult,
 )
 
-internal fun MovieDetailsDto.toDomain(): MovieDetails = MovieDetails(
+internal fun MovieDetailsDto.toRemote(): RemoteMovieDetails = RemoteMovieDetails(
     id = id,
     title = title,
     originalTitle = originalTitle,
@@ -47,10 +48,10 @@ internal fun MovieDetailsDto.toDomain(): MovieDetails = MovieDetails(
     tagline = tagline,
     posterPath = posterPath,
     backdropPath = backdropPath,
-    releaseDate = releaseDate.toLocalDateOrNull(),
+    releaseDate = releaseDate,
     runtimeMinutes = runtime,
     status = status,
-    genres = genres.map(GenreDto::toDomain),
+    genres = genres.map(GenreDto::toRemote),
     originalLanguage = originalLanguage,
     popularity = popularity,
     rating = voteAverage,
@@ -61,12 +62,3 @@ internal fun MovieDetailsDto.toDomain(): MovieDetails = MovieDetails(
     homepageUrl = homepage,
     imdbId = imdbId,
 )
-
-private fun String.toLocalDateOrNull(): LocalDate? {
-    if (isBlank()) return null
-    return try {
-        LocalDate.parse(this)
-    } catch (_: DateTimeParseException) {
-        null
-    }
-}

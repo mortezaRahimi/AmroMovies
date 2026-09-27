@@ -1,5 +1,6 @@
 package com.mortex.amromovies.core.network
 
+import com.mortex.amromovies.core.data.source.RemoteDataException
 import kotlinx.coroutines.test.runTest
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.mockwebserver.MockResponse
@@ -8,6 +9,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -123,6 +125,30 @@ class TmdbNetworkClientTest {
         val client = createClient(enableHttpLogging = false)
 
         assertFalse(client.okHttpClient.interceptors.any { it is HttpLoggingInterceptor })
+    }
+
+    @Test
+    fun `HTTP failures are translated at the network boundary`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(401))
+
+        try {
+            createClient().getGenres()
+            fail("Expected an unauthorized remote failure")
+        } catch (expected: RemoteDataException.Unauthorized) {
+            // Expected boundary failure.
+        }
+    }
+
+    @Test
+    fun `invalid payload is translated at the network boundary`() = runTest {
+        server.enqueue(jsonResponse("""{"genres":"invalid"}"""))
+
+        try {
+            createClient().getGenres()
+            fail("Expected an invalid response failure")
+        } catch (expected: RemoteDataException.InvalidResponse) {
+            // Expected boundary failure.
+        }
     }
 
     private fun createClient(enableHttpLogging: Boolean = false) = TmdbNetworkClient(

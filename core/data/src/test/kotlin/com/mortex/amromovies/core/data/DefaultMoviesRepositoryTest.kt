@@ -1,14 +1,17 @@
 package com.mortex.amromovies.core.data
 
 import com.mortex.amromovies.core.common.time.AppClock
-import com.mortex.amromovies.core.database.MoviesLocalDataSource
-import com.mortex.amromovies.core.domain.model.Genre
-import com.mortex.amromovies.core.domain.model.Movie
-import com.mortex.amromovies.core.domain.model.MovieDetails
+import com.mortex.amromovies.core.data.source.MoviesLocalDataSource
+import com.mortex.amromovies.core.data.source.MoviesRemoteDataSource
+import com.mortex.amromovies.core.data.source.RemoteDataException
+import com.mortex.amromovies.core.data.source.model.CachedGenre
+import com.mortex.amromovies.core.data.source.model.CachedMovie
+import com.mortex.amromovies.core.data.source.model.RemoteGenre
+import com.mortex.amromovies.core.data.source.model.RemoteMovie
+import com.mortex.amromovies.core.data.source.model.RemoteMovieDetails
+import com.mortex.amromovies.core.data.source.model.RemoteTrendingMoviesPage
 import com.mortex.amromovies.core.domain.result.AppError
 import com.mortex.amromovies.core.domain.result.AppResult
-import com.mortex.amromovies.core.network.TmdbRemoteDataSource
-import com.mortex.amromovies.core.network.TrendingMoviesPage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -16,14 +19,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import retrofit2.HttpException
-import retrofit2.Response
 import java.io.IOException
 
 class DefaultMoviesRepositoryTest {
@@ -45,7 +44,7 @@ class DefaultMoviesRepositoryTest {
         val result = repository(remote, local).refreshWeeklyTrendingMovies()
 
         assertEquals(AppResult.Success(Unit), result)
-        assertEquals((1L..100L).toList(), local.movies.value.map(Movie::id))
+        assertEquals((1L..100L).toList(), local.movies.value.map(CachedMovie::id))
         assertEquals(listOf(1, 2, 3, 4, 5, 6), remote.requestedPages.sorted())
     }
 
@@ -59,7 +58,7 @@ class DefaultMoviesRepositoryTest {
 
         repository(remote, local).refreshWeeklyTrendingMovies()
 
-        assertEquals((1L..35L).toList(), local.movies.value.map(Movie::id))
+        assertEquals((1L..35L).toList(), local.movies.value.map(CachedMovie::id))
     }
 
     @Test
@@ -76,7 +75,7 @@ class DefaultMoviesRepositoryTest {
 
         repository(remote, local).refreshWeeklyTrendingMovies()
 
-        assertEquals((1L..100L).toList(), local.movies.value.map(Movie::id))
+        assertEquals((1L..100L).toList(), local.movies.value.map(CachedMovie::id))
     }
 
     @Test
@@ -112,10 +111,12 @@ class DefaultMoviesRepositoryTest {
 
     @Test
     fun `cached flow remains available when refresh has no internet`() = runTest {
-        val cached = movies(1..3)
+        val cached = cachedMovies(1..3)
         val local = FakeLocalDataSource(initialMovies = cached)
         val repository = repository(
-            remote = FakeRemoteDataSource(failure = IOException("offline")),
+            remote = FakeRemoteDataSource(
+                failure = RemoteDataException.NoInternet(IOException("offline")),
+            ),
             local = local,
         )
 
@@ -127,10 +128,10 @@ class DefaultMoviesRepositoryTest {
 
     @Test
     fun `maps HTTP failures and preserves cached content`() = runTest {
-        val cached = movies(1..2)
+        val cached = cachedMovies(1..2)
         val local = FakeLocalDataSource(initialMovies = cached)
         val repository = repository(
-            remote = FakeRemoteDataSource(failure = httpException(503)),
+            remote = FakeRemoteDataSource(failure = RemoteDataException.Server(503)),
             local = local,
         )
 
@@ -164,17 +165,17 @@ class DefaultMoviesRepositoryTest {
         clock = AppClock { NOW },
     )
 
-    private fun movies(range: IntRange): List<Movie> = range.map { id -> movie(id.toLong()) }
+    private fun movies(range: IntRange): List<RemoteMovie> = range.map { id -> movie(id.toLong()) }
 
-    private fun movie(id: Long) = Movie(
+    private fun movie(id: Long) = RemoteMovie(
         id = id,
         title = "Movie $id",
         originalTitle = "Movie $id",
         overview = "Overview $id",
         posterPath = null,
         backdropPath = null,
-        genres = listOf(Genre(id = 18, name = "Drama")),
-        releaseDate = null,
+        genreIds = listOf(18),
+        releaseDate = "",
         originalLanguage = "en",
         popularity = 1000.0 - id,
         rating = 8.0,
@@ -182,24 +183,35 @@ class DefaultMoviesRepositoryTest {
         isAdult = false,
     )
 
-    private fun httpException(statusCode: Int): HttpException = HttpException(
-        Response.error<Any>(
-            statusCode,
-            "error".toResponseBody("application/json".toMediaType()),
-        ),
-    )
+    private fun cachedMovies(range: IntRange): List<CachedMovie> = range.map { id ->
+        CachedMovie(
+            id = id.toLong(),
+            title = "Movie $id",
+            originalTitle = "Movie $id",
+            overview = "Overview $id",
+            posterPath = null,
+            backdropPath = null,
+            genres = listOf(CachedGenre(18, "Drama")),
+            releaseDateEpochDay = null,
+            originalLanguage = "en",
+            popularity = 1000.0 - id,
+            rating = 8.0,
+            voteCount = 100,
+            isAdult = false,
+        )
+    }
 
     private class FakeLocalDataSource(
-        initialMovies: List<Movie> = emptyList(),
+        initialMovies: List<CachedMovie> = emptyList(),
         var updatedAt: Long? = null,
     ) : MoviesLocalDataSource {
         val movies = MutableStateFlow(initialMovies)
         var replaceCount = 0
 
-        override fun observeWeeklyTrendingMovies(): Flow<List<Movie>> = movies
+        override fun observeWeeklyTrendingMovies(): Flow<List<CachedMovie>> = movies
 
         override suspend fun replaceWeeklyTrendingMovies(
-            movies: List<Movie>,
+            movies: List<CachedMovie>,
             refreshedAtEpochMillis: Long,
         ) {
             replaceCount++
@@ -211,32 +223,31 @@ class DefaultMoviesRepositoryTest {
     }
 
     private class FakeRemoteDataSource(
-        private val pages: Map<Int, List<Movie>> = emptyMap(),
+        private val pages: Map<Int, List<RemoteMovie>> = emptyMap(),
         private val totalPages: Int = 1,
         private val delaysByPage: Map<Int, Long> = emptyMap(),
         private val firstPageDelayMillis: Long = 0L,
-        private val failure: Exception? = null,
-    ) : TmdbRemoteDataSource {
+        private val failure: Throwable? = null,
+    ) : MoviesRemoteDataSource {
         val requestedPages = mutableListOf<Int>()
         var genreRequestCount = 0
 
         override suspend fun getWeeklyTrendingMoviesPage(
             page: Int,
-            genres: List<Genre>,
-        ): TrendingMoviesPage {
+        ): RemoteTrendingMoviesPage {
             failure?.let { throw it }
             requestedPages += page
             delay(if (page == 1) firstPageDelayMillis else delaysByPage[page] ?: 0L)
-            return TrendingMoviesPage(page, totalPages, pages[page].orEmpty())
+            return RemoteTrendingMoviesPage(page, totalPages, pages[page].orEmpty())
         }
 
-        override suspend fun getGenres(): List<Genre> {
+        override suspend fun getGenres(): List<RemoteGenre> {
             failure?.let { throw it }
             genreRequestCount++
-            return listOf(Genre(id = 18, name = "Drama"))
+            return listOf(RemoteGenre(id = 18, name = "Drama"))
         }
 
-        override suspend fun getMovieDetails(movieId: Long): MovieDetails =
+        override suspend fun getMovieDetails(movieId: Long): RemoteMovieDetails =
             error("Not needed by these tests")
     }
 

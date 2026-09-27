@@ -28,8 +28,7 @@ room {
 }
 
 dependencies {
-    implementation(project(":core:common"))
-    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)

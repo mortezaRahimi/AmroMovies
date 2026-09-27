@@ -2,19 +2,7 @@ package com.mortex.amromovies.core.database
 
 import android.content.Context
 import androidx.room.Room
-import com.mortex.amromovies.core.domain.model.Movie
-import kotlinx.coroutines.flow.Flow
-
-interface MoviesLocalDataSource {
-    fun observeWeeklyTrendingMovies(): Flow<List<Movie>>
-
-    suspend fun replaceWeeklyTrendingMovies(
-        movies: List<Movie>,
-        refreshedAtEpochMillis: Long,
-    )
-
-    suspend fun getWeeklyTrendingUpdatedAt(): Long?
-}
+import com.mortex.amromovies.core.data.source.MoviesLocalDataSource
 
 fun createMoviesLocalDataSource(context: Context): MoviesLocalDataSource {
     val database = Room.databaseBuilder(
