@@ -1,5 +1,9 @@
 package com.mortex.amromovies.core.network
 
+import com.mortex.amromovies.core.domain.model.Genre
+import com.mortex.amromovies.core.domain.model.Movie
+import com.mortex.amromovies.core.domain.model.MovieDetails
+import com.mortex.amromovies.core.network.mapper.toDomain
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -12,7 +16,7 @@ class TmdbNetworkClient(
     accessToken: String,
     enableHttpLogging: Boolean,
     baseUrl: String = TMDB_BASE_URL,
-) {
+) : TmdbRemoteDataSource {
     init {
         require(accessToken.isNotBlank()) { "TMDB access token must not be blank." }
     }
@@ -54,6 +58,22 @@ class TmdbNetworkClient(
         .addConverterFactory(json.asConverterFactory(JSON_MEDIA_TYPE.toMediaType()))
         .build()
         .create(TmdbApi::class.java)
+
+    override suspend fun getWeeklyTrendingMoviesPage(
+        page: Int,
+        genres: List<Genre>,
+    ): TrendingMoviesPage = api.getWeeklyTrendingMovies(page = page).let { response ->
+        TrendingMoviesPage(
+            page = response.page,
+            totalPages = response.totalPages,
+            movies = response.toDomain(genres),
+        )
+    }
+
+    override suspend fun getGenres(): List<Genre> = api.getMovieGenres().toDomain()
+
+    override suspend fun getMovieDetails(movieId: Long): MovieDetails =
+        api.getMovieDetails(movieId).toDomain()
 
     private companion object {
         const val TMDB_BASE_URL = "https://api.themoviedb.org/3/"

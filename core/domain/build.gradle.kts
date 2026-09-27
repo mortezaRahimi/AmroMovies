@@ -7,6 +7,6 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
 }

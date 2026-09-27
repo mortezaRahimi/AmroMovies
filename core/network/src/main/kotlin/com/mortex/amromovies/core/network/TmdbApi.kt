@@ -10,6 +10,7 @@ import retrofit2.http.Query
 internal interface TmdbApi {
     @GET("trending/movie/week")
     suspend fun getWeeklyTrendingMovies(
+        @Query("page") page: Int,
         @Query("language") language: String = DEFAULT_LANGUAGE,
     ): TrendingMoviesResponseDto
 

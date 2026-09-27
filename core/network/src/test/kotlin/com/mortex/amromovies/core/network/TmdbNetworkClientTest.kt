@@ -57,10 +57,10 @@ class TmdbNetworkClientTest {
         )
         val client = createClient()
 
-        val response = client.api.getWeeklyTrendingMovies()
+        val response = client.api.getWeeklyTrendingMovies(page = 1)
         val request = server.takeRequest()
 
-        assertEquals("/3/trending/movie/week?language=en-US", request.path)
+        assertEquals("/3/trending/movie/week?page=1&language=en-US", request.path)
         assertEquals("Bearer test-token", request.getHeader("Authorization"))
         assertEquals("application/json", request.getHeader("Accept"))
         assertEquals(550L, response.results.single().id)
