@@ -24,5 +24,6 @@ enum class TrendingUiError {
     NO_INTERNET,
     UNAUTHORIZED,
     SERVER,
+    NOT_FOUND,
     UNKNOWN,
 }

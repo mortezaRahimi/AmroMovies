@@ -10,6 +10,8 @@ sealed interface TrendingAction {
 
     data class SelectSortDirection(val direction: SortDirection) : TrendingAction
 
+    data object ToggleSortDirection : TrendingAction
+
     data object Refresh : TrendingAction
 
     data object Retry : TrendingAction
