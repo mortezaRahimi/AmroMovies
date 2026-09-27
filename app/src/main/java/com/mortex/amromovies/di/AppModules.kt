@@ -10,6 +10,7 @@ import com.mortex.amromovies.core.domain.repository.MoviesRepository
 import com.mortex.amromovies.core.network.TmdbNetworkClient
 import com.mortex.amromovies.core.network.TmdbRemoteDataSource
 import com.mortex.amromovies.feature.trending.di.trendingModule
+import com.mortex.amromovies.feature.moviedetail.di.movieDetailModule
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import org.koin.android.ext.koin.androidContext
@@ -32,4 +33,4 @@ private val applicationModule = module {
     }
 }
 
-val appModules: List<Module> = listOf(applicationModule, trendingModule)
+val appModules: List<Module> = listOf(applicationModule, trendingModule, movieDetailModule)

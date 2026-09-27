@@ -7,7 +7,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.mortex.amromovies.core.designsystem.theme.AmroMoviesTheme
 import com.mortex.amromovies.feature.trending.presentation.model.GenreUiModel
+import com.mortex.amromovies.feature.trending.presentation.model.MovieSort
 import com.mortex.amromovies.feature.trending.presentation.model.MovieUiModel
+import com.mortex.amromovies.feature.trending.presentation.model.SortDirection
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -113,5 +115,58 @@ class TrendingScreenTest {
         composeRule.onNodeWithText("Example Movie").assertIsDisplayed()
         composeRule.onNodeWithText("Action").assertIsDisplayed()
         composeRule.onNodeWithText("Poster unavailable for Example Movie").assertIsDisplayed()
+    }
+
+    @Test
+    fun `genre control opens picker and emits selected genre`() {
+        val actions = mutableListOf<TrendingAction>()
+        composeRule.setContent {
+            AmroMoviesTheme(dynamicColor = false) {
+                TrendingScreen(
+                    uiState = TrendingUiState(
+                        genres = persistentListOf(
+                            GenreUiModel(28, "Action"),
+                            GenreUiModel(35, "Comedy"),
+                        ),
+                        isLoading = false,
+                    ),
+                    onAction = actions::add,
+                    onMovieClick = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Genre: All").performClick()
+        composeRule.onNodeWithText("Choose a genre").assertIsDisplayed()
+        composeRule.onNodeWithText("Action").performClick()
+
+        assertEquals(listOf(TrendingAction.SelectGenre(28)), actions)
+    }
+
+    @Test
+    fun `sort control exposes criterion and direction in one picker`() {
+        val actions = mutableListOf<TrendingAction>()
+        composeRule.setContent {
+            AmroMoviesTheme(dynamicColor = false) {
+                TrendingScreen(
+                    uiState = TrendingUiState(isLoading = false),
+                    onAction = actions::add,
+                    onMovieClick = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Sort: Popularity · Descending").performClick()
+        composeRule.onNodeWithText("Sort movies by").assertIsDisplayed()
+        composeRule.onNodeWithText("Title").performClick()
+        composeRule.onNodeWithText("Ascending").performClick()
+
+        assertEquals(
+            listOf(
+                TrendingAction.SelectSort(MovieSort.TITLE),
+                TrendingAction.SelectSortDirection(SortDirection.ASCENDING),
+            ),
+            actions,
+        )
     }
 }

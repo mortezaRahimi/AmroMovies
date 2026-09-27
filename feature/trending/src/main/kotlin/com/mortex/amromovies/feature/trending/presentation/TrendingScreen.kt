@@ -1,7 +1,6 @@
 package com.mortex.amromovies.feature.trending.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,28 +15,38 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,18 +76,18 @@ fun TrendingScreen(
                 .fillMaxSize()
                 .padding(contentPadding),
         ) {
-            GenreFilters(
+            FilterAndSortControls(
                 genres = uiState.genres,
                 selectedGenreId = uiState.selectedGenreId,
+                selectedSort = uiState.sortOption,
+                direction = uiState.sortDirection,
                 onGenreSelected = { genreId ->
                     onAction(TrendingAction.SelectGenre(genreId))
                 },
-            )
-            SortControls(
-                selectedSort = uiState.sortOption,
-                direction = uiState.sortDirection,
                 onSortSelected = { sort -> onAction(TrendingAction.SelectSort(sort)) },
-                onDirectionToggle = { onAction(TrendingAction.ToggleSortDirection) },
+                onDirectionSelected = { direction ->
+                    onAction(TrendingAction.SelectSortDirection(direction))
+                },
             )
 
             if (uiState.isRefreshing) {
@@ -101,69 +110,200 @@ fun TrendingScreen(
 }
 
 @Composable
-private fun GenreFilters(
+private fun FilterAndSortControls(
+    genres: List<GenreUiModel>,
+    selectedGenreId: Int?,
+    selectedSort: MovieSort,
+    direction: SortDirection,
+    onGenreSelected: (Int?) -> Unit,
+    onSortSelected: (MovieSort) -> Unit,
+    onDirectionSelected: (SortDirection) -> Unit,
+) {
+    var openSheet by rememberSaveable { mutableStateOf<ControlSheet?>(null) }
+    val selectedGenre = genres.firstOrNull { genre -> genre.id == selectedGenreId }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SelectionControl(
+            label = stringResource(R.string.trending_genre_control),
+            value = selectedGenre?.name ?: stringResource(R.string.trending_all_genres),
+            onClick = { openSheet = ControlSheet.GENRE },
+            modifier = Modifier.weight(1f),
+        )
+        SelectionControl(
+            label = stringResource(R.string.trending_sort_control),
+            value = "${selectedSort.label()} · ${direction.label()}",
+            onClick = { openSheet = ControlSheet.SORT },
+            modifier = Modifier.weight(1f),
+        )
+    }
+
+    when (openSheet) {
+        ControlSheet.GENRE -> GenrePickerSheet(
+            genres = genres,
+            selectedGenreId = selectedGenreId,
+            onGenreSelected = { genreId ->
+                onGenreSelected(genreId)
+                openSheet = null
+            },
+            onDismiss = { openSheet = null },
+        )
+        ControlSheet.SORT -> SortPickerSheet(
+            selectedSort = selectedSort,
+            direction = direction,
+            onSortSelected = onSortSelected,
+            onDirectionSelected = onDirectionSelected,
+            onDismiss = { openSheet = null },
+        )
+        null -> Unit
+    }
+}
+
+@Composable
+private fun SelectionControl(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val description = stringResource(R.string.trending_selection_control_description, label, value)
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .height(64.dp)
+            .clearAndSetSemantics {
+                contentDescription = description
+                role = Role.Button
+                this.onClick {
+                    onClick()
+                    true
+                }
+            },
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(text = label, style = MaterialTheme.typography.labelSmall)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GenrePickerSheet(
     genres: List<GenreUiModel>,
     selectedGenreId: Int?,
     onGenreSelected: (Int?) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
-            text = stringResource(R.string.trending_genre_filter_label),
-            style = MaterialTheme.typography.labelLarge,
+            text = stringResource(R.string.trending_choose_genre),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.titleLarge,
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                selected = selectedGenreId == null,
-                onClick = { onGenreSelected(null) },
-                label = { Text(stringResource(R.string.trending_all_genres)) },
-            )
-            genres.forEach { genre ->
-                FilterChip(
+        LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+            item(key = "all_genres") {
+                RadioOption(
+                    label = stringResource(R.string.trending_all_genres),
+                    selected = selectedGenreId == null,
+                    onClick = { onGenreSelected(null) },
+                )
+            }
+            items(items = genres, key = { genre -> genre.id }) { genre ->
+                RadioOption(
+                    label = genre.name,
                     selected = selectedGenreId == genre.id,
                     onClick = { onGenreSelected(genre.id) },
-                    label = { Text(genre.name) },
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SortControls(
+private fun SortPickerSheet(
     selectedSort: MovieSort,
     direction: SortDirection,
     onSortSelected: (MovieSort) -> Unit,
-    onDirectionToggle: () -> Unit,
+    onDirectionSelected: (SortDirection) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
-            text = stringResource(R.string.trending_sort_label),
-            style = MaterialTheme.typography.labelLarge,
+            text = stringResource(R.string.trending_choose_sort),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.titleLarge,
         )
-        Row(
+        MovieSort.entries.forEach { sort ->
+            RadioOption(
+                label = sort.label(),
+                selected = selectedSort == sort,
+                onClick = { onSortSelected(sort) },
+            )
+        }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = stringResource(R.string.trending_direction_label),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        SortDirection.entries.forEach { option ->
+            RadioOption(
+                label = option.label(),
+                selected = direction == option,
+                onClick = { onDirectionSelected(option) },
+            )
+        }
+        Button(
+            onClick = onDismiss,
             modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .align(Alignment.End)
+                .padding(24.dp),
         ) {
-            MovieSort.entries.forEach { sort ->
-                FilterChip(
-                    selected = selectedSort == sort,
-                    onClick = { onSortSelected(sort) },
-                    label = { Text(sort.label()) },
-                )
-            }
-            Button(onClick = onDirectionToggle) {
-                Text(direction.label())
-            }
+            Text(stringResource(R.string.trending_done))
         }
     }
+}
+
+@Composable
+private fun RadioOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .padding(horizontal = 24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(16.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+private enum class ControlSheet {
+    GENRE,
+    SORT,
 }
 
 @Composable
@@ -217,7 +357,7 @@ private fun MovieList(
     onMovieClick: (Long) -> Unit,
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(top =16.dp , start = 16.dp , end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (error != null) {

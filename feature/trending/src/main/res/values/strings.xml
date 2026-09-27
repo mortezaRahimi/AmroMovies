@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="trending_title">Trending this week</string>
-    <string name="trending_genre_filter_label">Filter by genre</string>
+    <string name="trending_genre_control">Genre</string>
+    <string name="trending_choose_genre">Choose a genre</string>
     <string name="trending_all_genres">All</string>
-    <string name="trending_sort_label">Sort movies</string>
+    <string name="trending_sort_control">Sort</string>
+    <string name="trending_choose_sort">Sort movies by</string>
+    <string name="trending_direction_label">Direction</string>
+    <string name="trending_done">Done</string>
+    <string name="trending_selection_control_description">%1$s: %2$s</string>
     <string name="trending_sort_popularity">Popularity</string>
     <string name="trending_sort_title">Title</string>
     <string name="trending_sort_release_date">Release date</string>

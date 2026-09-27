@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.mortex.amromovies.core.designsystem.theme.AmroMoviesTheme
-import com.mortex.amromovies.feature.trending.presentation.TrendingRoute
+import com.mortex.amromovies.navigation.AmroMoviesNavHost
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,10 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AmroMoviesTheme {
-                TrendingRoute(
-                    onMovieClick = { /* Movie details navigation is added with that feature. */ },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                AmroMoviesNavHost(modifier = Modifier.fillMaxSize())
             }
         }
     }

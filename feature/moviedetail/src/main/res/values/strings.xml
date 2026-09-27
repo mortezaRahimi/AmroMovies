@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="movie_detail_title">Movie details</string>
+    <string name="movie_detail_back">Back</string>
+    <string name="movie_detail_loading">Loading movie details</string>
+    <string name="movie_detail_retry">Retry</string>
+    <string name="movie_detail_error_no_internet">You appear to be offline. Check your connection and try again.</string>
+    <string name="movie_detail_error_unauthorized">The movie service could not authorize this request.</string>
+    <string name="movie_detail_error_not_found">This movie could not be found.</string>
+    <string name="movie_detail_error_server">The movie service is temporarily unavailable.</string>
+    <string name="movie_detail_error_unknown">Something went wrong while loading this movie.</string>
+    <string name="movie_detail_no_data">Movie details are unavailable.</string>
+    <string name="movie_detail_backdrop">Backdrop for %1$s</string>
+    <string name="movie_detail_poster">Poster for %1$s</string>
+    <string name="movie_detail_image_loading">Loading image for %1$s</string>
+    <string name="movie_detail_image_unavailable">Image unavailable for %1$s</string>
+    <string name="movie_detail_no_tagline">No tagline available</string>
+    <string name="movie_detail_overview">Overview</string>
+    <string name="movie_detail_no_overview">No overview is available.</string>
+    <string name="movie_detail_rating">Rating</string>
+    <string name="movie_detail_rating_value">%1$.1f out of 10</string>
+    <string name="movie_detail_votes">Vote count</string>
+    <string name="movie_detail_budget">Budget</string>
+    <string name="movie_detail_revenue">Revenue</string>
+    <string name="movie_detail_status">Status</string>
+    <string name="movie_detail_runtime">Runtime</string>
+    <string name="movie_detail_release_date">Release date</string>
+    <string name="movie_detail_genres">Genres</string>
+    <string name="movie_detail_not_available">Not available</string>
+    <string name="movie_detail_imdb">View on IMDb</string>
+</resources>
