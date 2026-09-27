@@ -12,7 +12,6 @@
     <string name="movie_detail_no_data">Movie details are unavailable.</string>
     <string name="movie_detail_backdrop">Backdrop for %1$s</string>
     <string name="movie_detail_poster">Poster for %1$s</string>
-    <string name="movie_detail_image_loading">Loading image for %1$s</string>
     <string name="movie_detail_image_unavailable">Image unavailable for %1$s</string>
     <string name="movie_detail_no_tagline">No tagline available</string>
     <string name="movie_detail_overview">Overview</string>

@@ -15,6 +15,7 @@
     <string name="trending_sort_ascending">Ascending</string>
     <string name="trending_sort_descending">Descending</string>
     <string name="trending_loading">Loading trending movies</string>
+    <string name="trending_refresh">Refresh</string>
     <string name="trending_refreshing">Refreshing trending movies</string>
     <string name="trending_retry">Retry</string>
     <string name="trending_error_no_internet">You appear to be offline. Check your connection and try again.</string>

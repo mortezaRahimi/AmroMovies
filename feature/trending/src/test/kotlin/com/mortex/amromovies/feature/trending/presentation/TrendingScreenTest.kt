@@ -1,10 +1,12 @@
 package com.mortex.amromovies.feature.trending.presentation
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import com.mortex.amromovies.core.designsystem.theme.AmroMoviesTheme
 import com.mortex.amromovies.feature.trending.presentation.model.GenreUiModel
 import com.mortex.amromovies.feature.trending.presentation.model.MovieSort
@@ -64,6 +66,24 @@ class TrendingScreenTest {
         composeRule.onNodeWithText("Retry").performClick()
 
         assertEquals(listOf(TrendingAction.Retry), actions)
+    }
+
+    @Test
+    fun `refresh control emits refresh action`() {
+        val actions = mutableListOf<TrendingAction>()
+        composeRule.setContent {
+            AmroMoviesTheme(dynamicColor = false) {
+                TrendingScreen(
+                    uiState = TrendingUiState(isLoading = false),
+                    onAction = actions::add,
+                    onMovieClick = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Refresh").performClick()
+
+        assertEquals(listOf(TrendingAction.Refresh), actions)
     }
 
     @Test
@@ -158,7 +178,9 @@ class TrendingScreenTest {
 
         composeRule.onNodeWithContentDescription("Sort: Popularity · Descending").performClick()
         composeRule.onNodeWithText("Sort movies by").assertIsDisplayed()
+        composeRule.onNodeWithText("Done").assertIsDisplayed()
         composeRule.onNodeWithText("Title").performClick()
+        composeRule.onNode(hasScrollAction()).performScrollToIndex(4)
         composeRule.onNodeWithText("Ascending").performClick()
 
         assertEquals(

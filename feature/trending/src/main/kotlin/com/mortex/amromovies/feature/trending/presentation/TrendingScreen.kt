@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,7 +71,19 @@ fun TrendingScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.trending_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.trending_title)) },
+                actions = {
+                    TextButton(
+                        onClick = { onAction(TrendingAction.Refresh) },
+                        enabled = !uiState.isLoading && !uiState.isRefreshing,
+                    ) {
+                        Text(stringResource(R.string.trending_refresh))
+                    }
+                },
+            )
+        },
     ) { contentPadding ->
         Column(
             modifier = Modifier
@@ -244,39 +258,54 @@ private fun SortPickerSheet(
     onDirectionSelected: (SortDirection) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Text(
-            text = stringResource(R.string.trending_choose_sort),
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        MovieSort.entries.forEach { sort ->
-            RadioOption(
-                label = sort.label(),
-                selected = selectedSort == sort,
-                onClick = { onSortSelected(sort) },
-            )
-        }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = stringResource(R.string.trending_direction_label),
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        SortDirection.entries.forEach { option ->
-            RadioOption(
-                label = option.label(),
-                selected = direction == option,
-                onClick = { onDirectionSelected(option) },
-            )
-        }
-        Button(
-            onClick = onDismiss,
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
             modifier = Modifier
-                .align(Alignment.End)
-                .padding(24.dp),
+                .fillMaxWidth()
+                .fillMaxHeight(0.75f),
         ) {
-            Text(stringResource(R.string.trending_done))
+            Text(
+                text = stringResource(R.string.trending_choose_sort),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(items = MovieSort.entries, key = { sort -> sort.name }) { sort ->
+                    RadioOption(
+                        label = sort.label(),
+                        selected = selectedSort == sort,
+                        onClick = { onSortSelected(sort) },
+                    )
+                }
+                item(key = "sort_direction_header") {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text(
+                        text = stringResource(R.string.trending_direction_label),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                items(items = SortDirection.entries, key = { option -> option.name }) { option ->
+                    RadioOption(
+                        label = option.label(),
+                        selected = direction == option,
+                        onClick = { onDirectionSelected(option) },
+                    )
+                }
+            }
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+            ) {
+                Text(stringResource(R.string.trending_done))
+            }
         }
     }
 }
@@ -357,7 +386,7 @@ private fun MovieList(
     onMovieClick: (Long) -> Unit,
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(top =16.dp , start = 16.dp , end = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (error != null) {
