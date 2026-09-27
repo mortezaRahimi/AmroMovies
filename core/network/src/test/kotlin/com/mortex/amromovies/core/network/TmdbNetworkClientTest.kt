@@ -128,6 +128,17 @@ class TmdbNetworkClientTest {
     }
 
     @Test
+    fun `enabled logging records metadata without request or response bodies`() {
+        val client = createClient(enableHttpLogging = true)
+
+        val loggingInterceptor = client.okHttpClient.interceptors
+            .filterIsInstance<HttpLoggingInterceptor>()
+            .single()
+
+        assertEquals(HttpLoggingInterceptor.Level.BASIC, loggingInterceptor.level)
+    }
+
+    @Test
     fun `HTTP failures are translated at the network boundary`() = runTest {
         server.enqueue(MockResponse().setResponseCode(401))
 

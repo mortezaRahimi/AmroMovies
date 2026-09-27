@@ -51,7 +51,7 @@ class TmdbNetworkClient(
                 addInterceptor(
                     HttpLoggingInterceptor().apply {
                         redactHeader(AUTHORIZATION_HEADER)
-                        level = HttpLoggingInterceptor.Level.BODY
+                        level = HttpLoggingInterceptor.Level.BASIC
                     },
                 )
             }
