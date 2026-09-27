@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="trending_title">Trending this week</string>
+    <string name="trending_genre_filter_label">Filter by genre</string>
+    <string name="trending_all_genres">All</string>
+    <string name="trending_sort_label">Sort movies</string>
+    <string name="trending_sort_popularity">Popularity</string>
+    <string name="trending_sort_title">Title</string>
+    <string name="trending_sort_release_date">Release date</string>
+    <string name="trending_sort_ascending">Ascending</string>
+    <string name="trending_sort_descending">Descending</string>
+    <string name="trending_loading">Loading trending movies</string>
+    <string name="trending_refreshing">Refreshing trending movies</string>
+    <string name="trending_retry">Retry</string>
+    <string name="trending_error_no_internet">You appear to be offline. Check your connection and try again.</string>
+    <string name="trending_error_unauthorized">The movie service could not authorize this request.</string>
+    <string name="trending_error_server">The movie service is temporarily unavailable.</string>
+    <string name="trending_error_not_found">Trending movies could not be found.</string>
+    <string name="trending_error_unknown">Something went wrong while loading movies.</string>
+    <string name="trending_empty">No trending movies are available.</string>
+    <string name="trending_empty_genre">No movies match the selected genre.</string>
+    <string name="trending_movie_poster">Poster for %1$s</string>
+    <string name="trending_movie_poster_loading">Loading poster for %1$s</string>
+    <string name="trending_movie_poster_unavailable">Poster unavailable for %1$s</string>
+    <string name="trending_genre_unavailable">Genre unavailable</string>
+    <string name="trending_rating">Rating %1$.1f out of 10</string>
+</resources>

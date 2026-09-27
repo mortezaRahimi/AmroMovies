@@ -9,8 +9,7 @@ internal fun Movie.toUiModel(): MovieUiModel = MovieUiModel(
     id = id,
     title = title,
     overview = overview,
-    posterPath = posterPath,
-    backdropPath = backdropPath,
+    posterUrl = posterPath?.let { path -> "$TMDB_POSTER_BASE_URL$path" },
     genres = genres
         .map { genre -> GenreUiModel(id = genre.id, name = genre.name) }
         .toPersistentList(),
@@ -18,3 +17,5 @@ internal fun Movie.toUiModel(): MovieUiModel = MovieUiModel(
     popularity = popularity,
     rating = rating,
 )
+
+private const val TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"

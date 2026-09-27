@@ -12,6 +12,7 @@ import kotlinx.collections.immutable.persistentListOf
 data class TrendingUiState(
     val movies: ImmutableList<MovieUiModel> = persistentListOf(),
     val genres: ImmutableList<GenreUiModel> = persistentListOf(),
+    val hasUnfilteredMovies: Boolean = false,
     val selectedGenreId: Int? = null,
     val sortOption: MovieSort = MovieSort.POPULARITY,
     val sortDirection: SortDirection = SortDirection.DESCENDING,

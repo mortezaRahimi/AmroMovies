@@ -115,6 +115,7 @@ class TrendingViewModel(
                     direction = state.sortDirection,
                 ),
                 genres = availableGenres(canonicalMovies),
+                hasUnfilteredMovies = canonicalMovies.isNotEmpty(),
             )
         }
     }
