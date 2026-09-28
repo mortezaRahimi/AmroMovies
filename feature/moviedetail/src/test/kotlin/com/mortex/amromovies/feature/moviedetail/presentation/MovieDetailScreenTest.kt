@@ -33,6 +33,19 @@ class MovieDetailScreenTest {
     }
 
     @Test
+    fun `back icon is accessible and emits navigation callback`() {
+        var backClicked = false
+        setContent(
+            state = MovieDetailUiState(isLoading = true),
+            onBackClick = { backClicked = true },
+        )
+
+        composeRule.onNodeWithContentDescription("Back").performClick()
+
+        assertEquals(true, backClicked)
+    }
+
+    @Test
     fun `error state displays message and emits retry`() {
         val actions = mutableListOf<MovieDetailAction>()
         setContent(
@@ -94,6 +107,7 @@ class MovieDetailScreenTest {
     private fun setContent(
         state: MovieDetailUiState,
         onAction: (MovieDetailAction) -> Unit = {},
+        onBackClick: () -> Unit = {},
         onOpenImdb: (String) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -101,7 +115,7 @@ class MovieDetailScreenTest {
                 MovieDetailScreen(
                     uiState = state,
                     onAction = onAction,
-                    onBackClick = {},
+                    onBackClick = onBackClick,
                     onOpenImdb = onOpenImdb,
                 )
             }

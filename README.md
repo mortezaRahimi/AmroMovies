@@ -14,6 +14,14 @@ The implemented assignment scope includes:
 - Koin dependency injection; and
 - focused repository, network, mapping, ViewModel, Room, and Compose tests.
 
+## Screenshots
+
+These images are the committed Roborazzi golden references used by the screenshot tests. They use a fixed phone viewport, API level, locale, light theme, and deterministic fixture data.
+
+| Trending | Movie details |
+|---|---|
+| ![Trending screen golden](feature/trending/src/test/screenshots/com.mortex.amromovies.feature.trending.presentation.TrendingScreenScreenshotTest.loadedMovies.png) | ![Movie detail screen golden](feature/moviedetail/src/test/screenshots/com.mortex.amromovies.feature.moviedetail.presentation.MovieDetailScreenScreenshotTest.loadedMovieDetails.png) |
+
 ## Requirements
 
 - Android Studio with support for Android Gradle Plugin 9.2.1 and Kotlin 2.2.10.
@@ -57,7 +65,7 @@ export TMDB_ACCESS_TOKEN=YOUR_TMDB_API_READ_ACCESS_TOKEN
 
 `TMDB_ACCESS_TOKEN` takes precedence over `local.properties`. Gradle escapes the configured value and exposes it to the application as `BuildConfig.TMDB_ACCESS_TOKEN`. Koin supplies that value when constructing the network client.
 
-`local.properties` is excluded by the repository's `.gitignore`. Never commit a real credential or place one in a tracked Gradle file. As with any credential embedded in a client application, the resulting APK cannot provide server-grade secret storage; a backend proxy would be required if that threat model becomes relevant.
+`local.properties` is excluded by the repository's `.gitignore`.
 
 ## How to Build and Run
 
@@ -102,7 +110,7 @@ ViewModel → immutable UI state → Compose
 
 The domain layer owns application models, typed results/errors, and the repository contract. The data layer implements orchestration, caching policy, transport-to-domain mapping, and technical-error mapping. Network and database modules implement data-source contracts and keep DTOs and Room entities inside their respective modules. Feature modules depend on domain contracts and presentation infrastructure, not Retrofit, Room, DTOs, or entities.
 
-No standalone use-case layer is currently present because the implemented operations do not add semantics beyond the repository contract. A use case should be introduced when it coordinates meaningful business behavior, not simply to add another forwarding class.
+No standalone use-case layer is currently present because the implemented operations do not add semantics beyond the repository contract.
 
 ## Module Structure
 
@@ -122,11 +130,11 @@ This modularization separates volatile infrastructure and independently testable
 
 ## Dependency Injection
 
-Koin is used because it aligns with the target team's stack, provides a lightweight Kotlin DSL, and is proportionate to the project size. The application module is the composition root and registers separate network, database, repository, trending, and movie-detail modules.
+Koin is used because it provides a lightweight Kotlin DSL, and is proportionate to the project size. The application module is the composition root and registers separate network, database, repository, trending, and movie-detail modules.
 
 Long-lived infrastructure and the repository use `single`; ViewModels use Koin's `viewModel` registration. There are currently no standalone use cases requiring `factory` bindings.
 
-Koin remains an implementation detail. Domain models, result types, business rules, and repository contracts do not import Koin or Android `Context`. Hilt was not selected because Koin is an explicit project requirement and already meets the dependency-construction needs here; this is a stack-alignment choice rather than a judgment against Hilt.
+Koin remains an implementation detail. Domain models, result types, business rules, and repository contracts do not import Koin or Android `Context`.
 
 ## State Management
 
@@ -211,7 +219,7 @@ Navigation Compose defines a trending destination and a `movie/{movieId}` detail
 
 ## Testing Strategy
 
-The repository does not publish a measured coverage percentage.
+Code coverage is not currently measured. The tests focus on critical repository, ViewModel, mapping, caching, filtering, sorting, and UI behavior.
 
 ### Unit / Business Logic Tests
 
@@ -249,11 +257,31 @@ Network tests use MockWebServer. Room tests use Robolectric and the Room testing
 
 ### Compose Tests
 
-Robolectric Compose tests cover loading, error/retry behavior, canonical and filtered empty states, movie-card content and missing posters, genre selection, combined sort controls, detail fallbacks, and valid IMDb actions. The repository also contains the default Android instrumentation smoke test, but the feature UI tests run as local tests and do not require a device.
+Robolectric Compose tests cover loading, error/retry behavior, canonical and filtered empty states, movie-card content and missing posters, genre selection, combined sort controls, detail fallbacks, and valid IMDb actions. Feature instrumentation tests verify the offline loading-to-error flow on an Android device.
+
+### Screenshot Tests
+
+Roborazzi golden tests render representative loaded states for both `TrendingScreen` and `MovieDetailScreen`. They compare the current rendering with the PNG references shown above, so unintended visual changes fail verification. Dynamic colors and remote image loading are disabled in these fixtures to keep output deterministic; missing-image placeholders remain part of the layouts being verified.
+
+Verify both goldens from the repository root:
+
+```bash
+./gradlew :feature:trending:verifyRoborazziDebug \
+  :feature:moviedetail:verifyRoborazziDebug
+```
+
+When an intentional UI change has been reviewed, regenerate both references with:
+
+```bash
+./gradlew :feature:trending:recordRoborazziDebug \
+  :feature:moviedetail:recordRoborazziDebug
+```
+
+Recording updates the tracked files under each feature's `src/test/screenshots` directory. Generated changes should be visually reviewed before they are committed.
 
 ## Architectural Decisions
 
-- **Koin instead of Hilt:** required stack alignment with concise constructor-based registrations and no DI dependency in domain code.
+- **Koin:** required stack alignment with concise constructor-based registrations and no DI dependency in domain code.
 - **Moderate modularization:** separate domain, orchestration, infrastructure, design system, and user-facing features without fragmenting every operation into its own module.
 - **Domain/UI separation:** domain models describe application data; Compose-aware UI models contain display-ready values and stability contracts.
 - **Repository-level error policy:** infrastructure failures become typed application errors before reaching ViewModels.
@@ -263,12 +291,12 @@ Robolectric Compose tests cover loading, error/retry behavior, canonical and fil
 
 ## Trade-offs
 
-- The cache is intentionally limited to weekly trending content rather than introducing a general synchronization engine for the assignment.
+- The cache is intentionally limited to weekly trending content rather than introducing a general synchronization engine.
 - Movie details remain network-only, keeping persistence focused but limiting offline detail access.
 - Cache freshness is a fixed one-hour policy rather than server-directed or endpoint-specific invalidation.
 - Genre data is fetched as part of a trending refresh and embedded in cached movie relationships; it is not maintained as an independently refreshed catalog.
 - Feature modules contain their presentation logic and UI together. Splitting each feature into separate API, domain, data, and UI modules would add build and ownership overhead without a current independent consumer.
-- Testing prioritizes repository rules, state transitions, formatting, and important Compose states. It does not attempt exhaustive screenshot, device, performance, or end-to-end coverage.
+- Testing prioritizes repository rules, state transitions, formatting, important Compose states, and representative screen goldens. It does not attempt exhaustive device, performance, or end-to-end coverage.
 - The UI focuses on assignment-required content and accessible state handling rather than advanced motion, adaptive multi-pane layouts, or a fully branded component library.
 
 ## Known Limitations
@@ -278,16 +306,6 @@ Robolectric Compose tests cover loading, error/retry behavior, canonical and fil
 - TMDB language is currently fixed to `en-US`.
 - Filtering supports one genre at a time; there is no search or multi-genre query.
 - The app contains no paging UI because pagination is consumed internally to produce the fixed top-100 dataset.
-- There are no screenshot/golden tests, performance benchmarks, analytics, crash reporting, or production observability integration.
+- Screenshot coverage is intentionally limited to one representative loaded state per screen; loading, errors, and interactions are covered by semantic Compose and instrumentation tests rather than additional goldens.
+- There are no performance benchmarks, analytics, crash reporting, or production observability integration.
 - The TMDB token is embedded in the built client through `BuildConfig` and can therefore be extracted from an APK; it is protected from source control, not from a determined client-side attacker.
-
-## Future Improvements
-
-- Cache movie details and introduce richer offline synchronization where product requirements justify it.
-- Add endpoint-specific cache policies, database migrations as the schema evolves, and scheduled background refresh.
-- Add configuration for locale/language and regional content.
-- Expand movie information with actors, profiles, trailers, and streaming-provider availability.
-- Add search, watchlists, ratings, and other social or account-backed functionality.
-- Add analytics, structured logging, crash reporting, and performance observability with an explicit privacy policy.
-- Add screenshot testing, device-level navigation tests, benchmarks, and broader accessibility testing.
-- Add adaptive layouts for tablets and foldables, plus further keyboard, screen-reader, and large-text validation.

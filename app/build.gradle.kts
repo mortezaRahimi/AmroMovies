@@ -17,9 +17,6 @@ val tmdbAccessToken = providers.environmentVariable("TMDB_ACCESS_TOKEN").orNull
         "Missing TMDB access token. Add access_token to local.properties " +
             "or define the TMDB_ACCESS_TOKEN environment variable.",
     )
-val escapedTmdbAccessToken = tmdbAccessToken
-    .replace("\\", "\\\\")
-    .replace("\"", "\\\"")
 
 android {
     namespace = "com.mortex.amromovies"
@@ -37,7 +34,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"$escapedTmdbAccessToken\"")
+        buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"$tmdbAccessToken\"")
     }
 
     buildTypes {

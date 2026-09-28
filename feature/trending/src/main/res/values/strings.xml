@@ -30,4 +30,6 @@
     <string name="trending_movie_poster_unavailable">Poster unavailable for %1$s</string>
     <string name="trending_genre_unavailable">Genre unavailable</string>
     <string name="trending_rating">Rating %1$.1f out of 10</string>
+    <string name="trending_release_date">Release date: %1$s</string>
+    <string name="trending_release_date_unavailable">Release date not available</string>
 </resources>

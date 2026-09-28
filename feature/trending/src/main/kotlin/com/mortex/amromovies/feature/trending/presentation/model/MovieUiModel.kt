@@ -14,4 +14,5 @@ data class MovieUiModel(
     val releaseDate: LocalDate?,
     val popularity: Double,
     val rating: Double,
+    val releaseDateLabel: String? = null,
 )

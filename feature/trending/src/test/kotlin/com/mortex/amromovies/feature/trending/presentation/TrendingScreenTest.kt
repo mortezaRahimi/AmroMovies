@@ -1,5 +1,8 @@
 package com.mortex.amromovies.feature.trending.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -13,6 +16,7 @@ import com.mortex.amromovies.feature.trending.presentation.model.MovieSort
 import com.mortex.amromovies.feature.trending.presentation.model.MovieUiModel
 import com.mortex.amromovies.feature.trending.presentation.model.SortDirection
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -81,7 +85,7 @@ class TrendingScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Refresh").performClick()
+        composeRule.onNodeWithContentDescription("Refresh").performClick()
 
         assertEquals(listOf(TrendingAction.Refresh), actions)
     }
@@ -190,5 +194,56 @@ class TrendingScreenTest {
             ),
             actions,
         )
+    }
+
+    @Test
+    fun `filter and sort changes scroll the movie list to the top`() {
+        val movies = (1L..12L).map { id ->
+            MovieUiModel(
+                id = id,
+                title = "Movie $id",
+                overview = "Overview",
+                posterUrl = null,
+                genres = persistentListOf(GenreUiModel(28, "Action")),
+                releaseDate = null,
+                popularity = id.toDouble(),
+                rating = 7.0,
+            )
+        }.toPersistentList()
+        var state by mutableStateOf(
+            TrendingUiState(
+                movies = movies,
+                genres = persistentListOf(GenreUiModel(28, "Action")),
+                hasUnfilteredMovies = true,
+                isLoading = false,
+            ),
+        )
+        composeRule.setContent {
+            AmroMoviesTheme(dynamicColor = false) {
+                TrendingScreen(
+                    uiState = state,
+                    onAction = {},
+                    onMovieClick = {},
+                )
+            }
+        }
+
+        composeRule.onNode(hasScrollAction()).performScrollToIndex(8)
+        composeRule.runOnIdle {
+            state = state.copy(
+                movies = movies.reversed().toPersistentList(),
+                sortOption = MovieSort.TITLE,
+            )
+        }
+        composeRule.onNodeWithText("Movie 12").assertIsDisplayed()
+
+        composeRule.onNode(hasScrollAction()).performScrollToIndex(8)
+        composeRule.runOnIdle {
+            state = state.copy(
+                movies = movies,
+                selectedGenreId = 28,
+            )
+        }
+        composeRule.onNodeWithText("Movie 1").assertIsDisplayed()
     }
 }
