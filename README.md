@@ -1,311 +1,355 @@
 # AmroMovies
 
-## Project Overview
+## Project overview
 
-AmroMovies is an Android application that displays TMDB's weekly trending movies, limited to the first 100 unique results in TMDB trending order. Users can filter that dataset by genre, sort it by popularity, title, or release date, refresh it, and open a movie-detail screen.
+AmroMovies is the first version of AMRO's Android app. It shows this week's top 100 trending movies from TMDB, lets users filter that list by genre, sort it by popularity, title, or release date, and open a movie to see its full details.
 
-The implemented assignment scope includes:
+The project is intentionally shaped like a real application rather than a disposable demo. It uses Compose, MVVM, unidirectional data flow, Koin, Retrofit, Room, and a modular structure that leaves room for future features without turning the MVP into a framework.
 
-- a Compose and Material 3 UI for trending movies and movie details;
-- local genre filtering and ascending/descending sorting;
-- TMDB weekly trending, movie genres, and movie-detail API integration;
-- Room persistence for the ranked weekly trending dataset;
-- MVVM with unidirectional actions and immutable `StateFlow` UI state;
-- Koin dependency injection; and
-- focused repository, network, mapping, ViewModel, Room, and Compose tests.
+What is implemented:
+
+- weekly top 100 trending movies;
+- genre filtering within those same 100 movies;
+- ascending and descending sorting by popularity, title, and release date;
+- a movie-detail screen with all fields requested in the assignment;
+- Room caching for trending movies;
+- loading, refresh, empty, offline, and server-error states;
+- unit, repository, network, Room, ViewModel, Compose, instrumentation, and screenshot tests.
+
+Personalized recommendations are part of AMRO's longer-term product direction, but they are not part of this MVP's concrete screen requirements and are not implemented here.
 
 ## Screenshots
 
-These images are the committed Roborazzi golden references used by the screenshot tests. They use a fixed phone viewport, API level, locale, light theme, and deterministic fixture data.
+These are also the golden images used by the screenshot tests, so they stay in sync with the UI checked by the test suite.
 
 | Trending | Movie details |
 |---|---|
-| ![Trending screen golden](feature/trending/src/test/screenshots/com.mortex.amromovies.feature.trending.presentation.TrendingScreenScreenshotTest.loadedMovies.png) | ![Movie detail screen golden](feature/moviedetail/src/test/screenshots/com.mortex.amromovies.feature.moviedetail.presentation.MovieDetailScreenScreenshotTest.loadedMovieDetails.png) |
+| ![Trending screen](feature/trending/src/test/screenshots/com.mortex.amromovies.feature.trending.presentation.TrendingScreenScreenshotTest.loadedMovies.png) | ![Movie-detail screen](feature/moviedetail/src/test/screenshots/com.mortex.amromovies.feature.moviedetail.presentation.MovieDetailScreenScreenshotTest.loadedMovieDetails.png) |
 
 ## Requirements
 
-- Android Studio with support for Android Gradle Plugin 9.2.1 and Kotlin 2.2.10.
-- JDK 21 for the Gradle daemon. The repository declares this in `gradle/gradle-daemon-jvm.properties` and uses the Foojay resolver convention for toolchain resolution.
-- Android SDK Platform 36. The application compiles against Android 36.1, targets API 36, and supports API 24 and newer.
-- No separate Gradle installation is required. The included wrapper uses Gradle 9.4.1.
-- A TMDB API Read Access Token.
+- Android Studio with support for Android Gradle Plugin 9.2.1 and Kotlin 2.2.10
+- JDK 21 for Gradle
+- Android SDK Platform 36
+- A TMDB API Read Access Token
+
+The app compiles against Android 36.1, targets API 36, and supports API 24 and newer. The repository includes the Gradle 9.4.1 wrapper, so a separate Gradle installation is not needed.
 
 ## Setup
 
-1. Clone the repository and enter its directory:
+1. Clone the repository:
 
    ```bash
    git clone <repository-url>
    cd AmroMovies
    ```
 
-2. Open the project in Android Studio and allow it to install or select the required JDK and Android SDK.
+2. Open it in Android Studio and install the requested JDK and Android SDK if needed.
 
-3. Add a TMDB API Read Access Token using one of the methods in the next section.
+3. Configure a TMDB token as described below.
 
-4. Sync the Gradle project.
+4. Sync Gradle and run the `app` configuration on an emulator or device running API 24 or newer.
 
-5. Select the `app` run configuration and run it on an emulator or device running Android 7.0/API 24 or newer.
+## TMDB credential configuration
 
-## TMDB Credential Configuration
-
-The build requires a TMDB API Read Access Token. The token is sent as a Bearer token in the `Authorization` header; it is not expected to be a TMDB v3 API key.
-
-For local development, add this entry to the root `local.properties` file:
+Create or update the root `local.properties` file:
 
 ```properties
 access_token=YOUR_TMDB_API_READ_ACCESS_TOKEN
 ```
 
-Alternatively, define an environment variable before invoking Gradle:
+Use the TMDB API Read Access Token, not the shorter v3 API key. The client sends it as a Bearer token in the `Authorization` header.
+
+An environment variable can be used instead:
 
 ```bash
 export TMDB_ACCESS_TOKEN=YOUR_TMDB_API_READ_ACCESS_TOKEN
 ```
 
-`TMDB_ACCESS_TOKEN` takes precedence over `local.properties`. Gradle escapes the configured value and exposes it to the application as `BuildConfig.TMDB_ACCESS_TOKEN`. Koin supplies that value when constructing the network client.
+`TMDB_ACCESS_TOKEN` takes precedence over `local.properties`. Gradle exposes the value through `BuildConfig`, and the app's Koin setup passes it to the network client.
 
-`local.properties` is excluded by the repository's `.gitignore`.
+`local.properties` is ignored by Git and should never be committed. Like any credential packaged in a mobile client, the token can still be extracted from a built APK. A backend proxy would be needed if AMRO later requires server-grade credential protection.
 
-## How to Build and Run
+## Build and run
 
-All commands run from the repository root and require the credential configuration above, including test and lint tasks because the application module validates the token during Gradle configuration.
+Run these commands from the repository root. A token must be configured before Gradle evaluates the application module.
 
 ```bash
 # Build the debug APK
 ./gradlew assembleDebug
 
-# Run all local unit and Robolectric tests
+# Run all local tests
 ./gradlew test
 
-# Run the debug unit-test variants
+# Run only debug unit and Robolectric tests
 ./gradlew testDebugUnitTest
 
-# Run Android lint for debug variants
+# Run Android lint
 ./gradlew lintDebug
 
-# Build the minified and resource-shrunk release APK
+# Build the minified, resource-shrunk release APK
 ./gradlew assembleRelease
 ```
 
-Run the app itself from Android Studio, or install the generated debug APK on a connected device with the usual Android tooling.
+The app can be launched from Android Studio after selecting the `app` run configuration.
 
 ## Architecture
 
-The project applies Clean Architecture principles without adding a use-case class for every repository call or introducing generic base classes.
+The project follows Clean Architecture principles, but it does not add a class or module only to make the layer diagram longer.
 
 ```text
 Compose Route / Screen
         ↓ actions
-ViewModel (StateFlow)
+ViewModel + StateFlow
         ↓
-Domain MoviesRepository contract
+MoviesRepository contract
         ↓
 DefaultMoviesRepository
-        ├── MoviesRemoteDataSource → Retrofit / TMDB
-        └── MoviesLocalDataSource  → Room
-        ↓ state
-ViewModel → immutable UI state → Compose
+        ├── remote data source → Retrofit / TMDB
+        └── local data source  → Room
+        ↓
+immutable UI state → Compose
 ```
 
-The domain layer owns application models, typed results/errors, and the repository contract. The data layer implements orchestration, caching policy, transport-to-domain mapping, and technical-error mapping. Network and database modules implement data-source contracts and keep DTOs and Room entities inside their respective modules. Feature modules depend on domain contracts and presentation infrastructure, not Retrofit, Room, DTOs, or entities.
+The main rule is that dependencies point towards stable application contracts:
 
-No standalone use-case layer is currently present because the implemented operations do not add semantics beyond the repository contract.
+- Domain owns the application models, errors, results, and repository contract.
+- Features depend on that contract, not on Retrofit or Room.
+- Data implements the contract and owns pagination, caching, and error translation.
+- Network and database modules provide the concrete infrastructure.
+- The app module connects everything through Koin.
 
-## Module Structure
+There is no standalone use-case layer at the moment. The current operations would only forward calls to `MoviesRepository`, which would add names without adding behavior. A use case becomes worthwhile when an operation coordinates several repositories or represents reusable application policy.
 
-| Module | Responsibility | Direct project dependencies | Why it exists |
-|---|---|---|---|
-| `:app` | Application entry point, navigation, BuildConfig credential wiring, and Koin composition root | All core and feature modules | Owns Android application integration and connects implementations to contracts. |
-| `:core:common` | Injectable clock abstraction and system implementation | None | Keeps time-based cache behavior deterministic in tests without coupling it to Android. |
-| `:core:domain` | `Movie`, `MovieDetails`, `Genre`, `AppResult`, `AppError`, and `MoviesRepository` | None of the other project modules | Defines pure Kotlin application contracts and models. |
-| `:core:data` | Repository implementation, remote/local data-source contracts, boundary models, mapping, pagination, caching policy, and error translation | `:core:common`, `:core:domain` | Coordinates data without depending on concrete Retrofit or Room implementations. |
-| `:core:network` | TMDB API, DTOs, serialization, authentication, OkHttp, Retrofit, and remote data-source implementation | `:core:data` | Isolates TMDB and HTTP-specific concerns. DTOs remain internal. |
-| `:core:database` | Room database, DAO, entities, relationships, cache metadata, and local data-source implementation | `:core:data` | Isolates persistence details while preserving trending rank transactionally. |
-| `:core:designsystem` | Shared Material 3 theme, colors, and typography | No project modules | Provides reusable visual foundations without owning feature behavior. |
-| `:feature:trending` | Trending UI models/state/actions, ViewModel, pure filtering/sorting, Compose UI, and feature Koin module | `:core:domain`, `:core:designsystem` | Encapsulates the trending user flow. |
-| `:feature:moviedetail` | Detail UI model/state/action, ViewModel, formatting, Compose UI, and feature Koin module | `:core:domain`, `:core:designsystem` | Encapsulates the movie-detail user flow. |
+## Module structure
 
-This modularization separates volatile infrastructure and independently testable features while avoiding one module per class or per architectural layer fragment.
+| Module | Responsibility | Depends on |
+|---|---|---|
+| `:app` | Application startup, navigation, credential wiring, and the Koin composition root | Core and feature modules |
+| `:core:common` | The injectable clock used by cache freshness logic | Nothing |
+| `:core:domain` | Pure Kotlin models, `AppResult`, `AppError`, and `MoviesRepository` | Nothing |
+| `:core:data` | Repository implementation, data-source contracts, mapping, pagination, caching policy, and error translation | `:core:common`, `:core:domain` |
+| `:core:network` | TMDB API, DTOs, Retrofit, OkHttp, serialization, authentication, and remote data source | `:core:data` |
+| `:core:database` | Room database, DAO, entities, relationships, cache metadata, and local data source | `:core:data` |
+| `:core:designsystem` | Shared Material 3 theme, colors, and typography | No project modules |
+| `:feature:trending` | Trending state, actions, ViewModel, filtering, sorting, Compose UI, and Koin registration | `:core:domain`, `:core:designsystem` |
+| `:feature:moviedetail` | Detail state, ViewModel, display formatting, Compose UI, and Koin registration | `:core:domain`, `:core:designsystem` |
 
-## Dependency Injection
+This is enough separation for feature ownership without creating one Gradle module per class. If future teams need to share feature contracts with one another, small feature API modules can be introduced at that point.
 
-Koin is used because it provides a lightweight Kotlin DSL, and is proportionate to the project size. The application module is the composition root and registers separate network, database, repository, trending, and movie-detail modules.
+## Dependency injection
 
-Long-lived infrastructure and the repository use `single`; ViewModels use Koin's `viewModel` registration. There are currently no standalone use cases requiring `factory` bindings.
+Koin was selected because it is part of the target stack, has a small Kotlin DSL, and fits the size of the app. Hilt would also be a valid Android DI option, but introducing both would serve no purpose.
 
-Koin remains an implementation detail. Domain models, result types, business rules, and repository contracts do not import Koin or Android `Context`.
+The app module registers the network, database, repository, trending, and movie-detail modules. Infrastructure and the repository use `single`, while ViewModels use Koin's `viewModel` registration.
 
-## State Management
+Koin is only used to construct objects. Domain models, repository contracts, mapping, and business rules do not depend on Koin or Android `Context`.
 
-Both features use MVVM and unidirectional data flow:
+## State management
 
-1. A stateless Compose screen emits a typed action through `onAction`.
-2. The route obtains the Koin ViewModel and forwards the action.
-3. The ViewModel processes repository results or applies pure local transformations.
-4. The ViewModel updates a private `MutableStateFlow`.
-5. Only `StateFlow<...UiState>` is exposed publicly.
-6. The route observes state with `collectAsStateWithLifecycle()` and passes it back to the screen.
-
-Initial loading and pull/manual refresh are separate state flags. Loading is presentation state and is not embedded in `AppResult` or propagated through a generic resource wrapper across every layer.
-
-## Network Layer
-
-`TmdbNetworkClient` configures Retrofit, OkHttp, and Kotlinx Serialization. Serialization ignores unknown fields, handles explicit nulls conservatively, and coerces compatible input values. The implemented endpoints are:
-
-- `GET trending/movie/week`;
-- `GET genre/movie/list`; and
-- `GET movie/{movie_id}`.
-
-OkHttp applies the TMDB Bearer credential and JSON accept header. It uses a 10-second connection timeout and 30-second read, write, and total call timeouts. HTTP logging is installed only when `BuildConfig.DEBUG` is true, uses `BASIC` metadata-level logging, and redacts the authorization header. Release builds do not install the logging interceptor.
-
-TMDB DTOs are internal to `:core:network` and map to data-boundary models before leaving that module. They are never exposed to domain or presentation code.
-
-## Top 100 Trending Logic
-
-TMDB's weekly trending response is paginated. The repository fetches the first page, reads the reported page count, and requests additional pages in structured-concurrency batches using `coroutineScope`, `async`, and `awaitAll` until it has up to 100 unique movies or TMDB has no more pages.
-
-Results are merged in page order, duplicate movie IDs are ignored after their first occurrence, and the resulting dataset is capped at 100. Pagination is therefore invisible to the ViewModel.
-
-Genre filtering and sorting operate only on the canonical cached top-100 dataset already observed by the ViewModel. Changing genre, sort criterion, or direction does not trigger a network request. Supported sorting is popularity, case-insensitive title, and release date in ascending or descending order. Missing release dates have deterministic placement.
-
-## Caching / Offline Strategy
-
-Room is the source of truth for weekly trending content. The repository refresh path is:
+Both features use MVVM with unidirectional data flow:
 
 ```text
-TMDB refresh → repository mapping/policy → transactional Room replacement
-                                             ↓
-                                      observed Room Flow
-                                             ↓
-                                          ViewModel
+user interaction
+      ↓
+typed action
+      ↓
+ViewModel
+      ↓
+immutable UiState
+      ↓
+Compose
 ```
 
-The cache stores movie fields, genres, movie/genre relationships, explicit trending rank, and a refresh timestamp. Replacing the dataset is transactional so movies, relationships, ordering, and metadata change consistently.
+Each ViewModel keeps its `MutableStateFlow` private and exposes a read-only `StateFlow`. Route composables obtain the ViewModel, collect state with `collectAsStateWithLifecycle()`, and pass state and callbacks into stateless screen composables.
 
-An automatic initial refresh is skipped when the cached weekly dataset is less than one hour old. Manual refresh and retry are forced. An injectable `AppClock` makes freshness behavior deterministic in repository tests, and a mutex prevents duplicate concurrent refresh work.
+Loading and refreshing are separate states. This allows cached content to remain visible during a manual refresh instead of replacing the list with a full-screen spinner.
 
-If refresh fails, already cached trending content remains available through the Room flow while the UI can also display the refresh error. Filtering and sorting never invalidate or refresh the cache.
+## Network layer
 
-This is partial offline support, not a complete offline synchronization system. Previously cached trending movies can be displayed without a successful refresh, but movie details are fetched remotely and are not persisted. There is no background synchronization, stale-while-revalidate worker, or conflict-resolution framework.
+The TMDB client uses:
 
-## Error Handling
+- Retrofit;
+- OkHttp;
+- Kotlinx Serialization;
+- Bearer-token authentication.
 
-HTTP, serialization, and connectivity details are contained at infrastructure/data boundaries:
+Implemented endpoints:
 
-- the network implementation translates `IOException`, HTTP status failures, and invalid serialized responses into remote data failures;
-- the repository maps those failures to `AppError` values such as `NoInternet`, `Unauthorized`, `NotFound`, `Server`, and `Unknown`;
-- feature-specific mapper functions translate `AppError` into UI errors; and
-- ViewModels do not depend on Retrofit, `HttpException`, Room DAOs, or `IOException`.
+- `GET trending/movie/week`
+- `GET genre/movie/list`
+- `GET movie/{movie_id}`
 
-Both network and repository boundaries rethrow `CancellationException`, allowing structured coroutine cancellation to propagate. ViewModels consume typed `AppResult` values rather than catching broad technical exceptions. Loading and refreshing remain explicit UI-state concerns.
+The client uses a 10-second connection timeout and 30-second read, write, and total call timeouts. Debug builds install BASIC HTTP logging and redact the authorization header. Release builds do not install the logging interceptor.
 
-## Compose Stability and Performance
+TMDB DTOs stay inside `:core:network`. They are mapped into data-boundary models before leaving the module and never reach domain or Compose code.
 
-- Domain models contain no Compose annotations or dependencies.
-- Presentation models and UI states use `@Immutable` where their properties satisfy the immutability contract.
-- Persistent immutable collections are used in UI state and models where useful.
-- No blanket `@Stable` annotations are used.
-- Trending movie rows use `movie.id` as their stable `LazyColumn` key; genre controls also use stable genre IDs.
-- Filtering, sorting, genre extraction, mapping, and display formatting are outside composables.
-- Trending transformations are pure, deterministic, and do not mutate the canonical source list.
-- Route composables own lifecycle collection and ViewModel access; screen composables remain stateless.
+## Top 100 trending logic
+
+TMDB returns trending movies in pages. The repository hides that detail from the rest of the app:
+
+1. Fetch the first page and read the available page count.
+2. Fetch more pages in structured batches using `coroutineScope`, `async`, and `awaitAll`.
+3. Merge responses in page order.
+4. Ignore duplicate movie IDs after their first appearance.
+5. Stop once 100 unique movies have been collected or TMDB has no more pages.
+6. Store at most 100 movies with their trending rank.
+
+The ViewModel never sees a TMDB page number.
+
+Filtering and sorting run only against this canonical top-100 dataset. Changing a genre or sort option does not call the network, and the visible list scrolls back to the top after either selection changes.
+
+## Caching and offline behavior
+
+Room is the source of truth for the trending screen:
+
+```text
+TMDB refresh
+     ↓
+repository policy and mapping
+     ↓
+transactional Room replacement
+     ↓
+Room Flow
+     ↓
+ViewModel
+```
+
+The cache stores movies, genres, movie/genre relationships, trending rank, and the last successful refresh time. Replacing the trending dataset is transactional, so observers never see a partially updated list.
+
+The automatic startup refresh is skipped when the cache is less than one hour old. Manual refresh and retry bypass that freshness check. An injectable `AppClock` makes the policy deterministic in tests, and a mutex prevents duplicate refreshes from running together.
+
+If a refresh fails, existing cached movies remain visible and the UI can show an inline error. This provides useful offline behavior without introducing a background synchronization framework.
+
+Movie details are not cached yet, so opening a detail screen still requires a successful network request. Coil handles image memory and disk caching; image files are not stored in Room.
+
+## Error handling
+
+Technical failures are interpreted before they reach presentation code:
+
+```text
+IOException / HTTP / serialization failure
+                 ↓
+remote data failure
+                 ↓
+AppError
+                 ↓
+feature-specific UI error
+```
+
+ViewModels do not depend on Retrofit, `HttpException`, `IOException`, or Room DAOs. They receive typed `AppResult` values and map application errors to messages appropriate for each screen.
+
+`CancellationException` is always rethrown at exception-mapping boundaries. Loading is kept in UI state rather than being added to a generic result wrapper used across every layer.
+
+## Compose stability and performance
+
+- Domain models have no Compose annotations or dependencies.
+- Presentation models use `@Immutable` only when their properties meet that contract.
+- Persistent immutable collections are used in UI state where they are useful.
+- There are no blanket `@Stable` annotations.
+- Trending rows use `movie.id` as their stable `LazyColumn` key.
+- Filtering, sorting, mapping, and formatting stay outside composables.
+- Route composables own lifecycle collection and navigation; screens remain stateless.
+
+The top-100 transformations are small enough to run synchronously. If the dataset or transformation cost grows later, the current boundaries allow dispatcher-backed computation to be introduced without changing the composable APIs.
 
 ## Navigation
 
-Navigation Compose defines a trending destination and a `movie/{movieId}` detail destination. Only the `Long` movie ID is placed in the navigation route. The full movie object is not serialized into navigation state.
+Navigation Compose defines the trending destination and `movie/{movieId}` detail destination. Only the movie ID is passed through navigation; the full movie object is not serialized into the route.
 
-`MovieDetailViewModel` receives the ID through its Koin parameters and requests the required detail data from `MoviesRepository`. This keeps the detail feature independent from whatever list or deep link opened it.
+`MovieDetailViewModel` receives that ID through Koin parameters and loads its own data. This also leaves the detail screen ready to be opened from future features or deep links.
 
-## Testing Strategy
+## Testing strategy
 
-Code coverage is not currently measured. The tests focus on critical repository, ViewModel, mapping, caching, filtering, sorting, and UI behavior.
+Code coverage is not currently measured. The test suite instead focuses on the paths where regressions would affect application behavior.
 
-### Unit / Business Logic Tests
+### Unit and business-logic tests
 
-- every genre-filter, sort-option, and direction combination;
-- case-insensitive title ordering and deterministic missing release dates;
-- top-100 filtering boundaries and source-list immutability;
-- available-genre derivation;
-- domain, cached, remote, and presentation mapping behavior; and
-- movie-detail date, currency, runtime, IMDb, and missing-field formatting.
+- every genre, sort option, and direction combination;
+- case-insensitive title ordering;
+- deterministic handling of missing release dates;
+- top-100 boundaries and source-list immutability;
+- available genre calculation;
+- domain, remote, cached, and presentation mapping;
+- date, currency, runtime, IMDb, and missing-value formatting.
 
-### ViewModel Tests
+### ViewModel tests
 
 - initial loading and cached-content success;
-- typed failure mapping;
+- application-error to UI-error mapping;
 - retry and forced refresh;
-- separate refreshing state while content remains visible;
-- genre selection without refresh;
-- sort selection and direction toggling;
-- selected genres with no matching movies; and
-- detail loading with the navigation ID, success, error, and retry.
+- refreshing while content remains visible;
+- genre and sort changes without network refresh;
+- no-result filtering;
+- movie-detail loading, success, failure, and retry.
 
-The coroutine tests use `kotlinx-coroutines-test`; Turbine is available where flow assertions benefit from it.
+### Repository, network, and Room tests
 
-### Repository / Network Tests
+- page aggregation, ordering, deduplication, and the 100-item limit;
+- fewer-than-100 responses;
+- concurrent page loading and duplicate-refresh suppression;
+- fresh-cache and forced-refresh behavior;
+- offline, HTTP, serialization, and cancellation failures;
+- TMDB paths, headers, authentication, and logging configuration;
+- Room ranking, relationships, transactional replacement, and stale-row cleanup.
 
-- aggregation, ordering, deduplication, exactly 100 results, and fewer-than-100 responses;
-- concurrent page completion and concurrent refresh suppression;
-- fresh-cache skipping versus forced refresh;
-- offline and HTTP failures while preserving cached content;
-- cancellation propagation;
-- TMDB request paths, authentication, serialization, DTO mapping, and logging configuration; and
-- Room trending rank, genre relationships, transactional replacement, and stale-row removal.
+MockWebServer is used for HTTP tests. Room tests run with Robolectric and the Room testing library.
 
-Network tests use MockWebServer. Room tests use Robolectric and the Room testing support library.
+### Compose and instrumentation tests
 
-### Compose Tests
+Compose tests cover loading, errors, retry actions, empty states, movie content, missing images, genre selection, sorting controls, scroll-to-top behavior, detail fallbacks, navigation callbacks, and valid IMDb actions.
 
-Robolectric Compose tests cover loading, error/retry behavior, canonical and filtered empty states, movie-card content and missing posters, genre selection, combined sort controls, detail fallbacks, and valid IMDb actions. Feature instrumentation tests verify the offline loading-to-error flow on an Android device.
+The feature instrumentation tests exercise loading-to-offline-error behavior on an Android device for both screens.
 
-### Screenshot Tests
+### Screenshot tests
 
-Roborazzi golden tests render representative loaded states for both `TrendingScreen` and `MovieDetailScreen`. They compare the current rendering with the PNG references shown above, so unintended visual changes fail verification. Dynamic colors and remote image loading are disabled in these fixtures to keep output deterministic; missing-image placeholders remain part of the layouts being verified.
+Roborazzi compares representative loaded states for the trending and movie-detail screens with the PNG references shown above. The tests use a fixed viewport, API level, locale, light theme, and static image fallbacks to keep rendering deterministic.
 
-Verify both goldens from the repository root:
+Verify the current references:
 
 ```bash
 ./gradlew :feature:trending:verifyRoborazziDebug \
   :feature:moviedetail:verifyRoborazziDebug
 ```
 
-When an intentional UI change has been reviewed, regenerate both references with:
+After an intentional UI change has been reviewed, record new references:
 
 ```bash
 ./gradlew :feature:trending:recordRoborazziDebug \
   :feature:moviedetail:recordRoborazziDebug
 ```
 
-Recording updates the tracked files under each feature's `src/test/screenshots` directory. Generated changes should be visually reviewed before they are committed.
+Recording updates the files under each feature's `src/test/screenshots` directory. Review those image changes before committing them.
 
-## Architectural Decisions
+## Key decisions
 
-- **Koin:** required stack alignment with concise constructor-based registrations and no DI dependency in domain code.
-- **Moderate modularization:** separate domain, orchestration, infrastructure, design system, and user-facing features without fragmenting every operation into its own module.
-- **Domain/UI separation:** domain models describe application data; Compose-aware UI models contain display-ready values and stability contracts.
-- **Repository-level error policy:** infrastructure failures become typed application errors before reaching ViewModels.
-- **Local filtering and sorting:** the assignment's canonical top 100 is fetched/cached once; presentation choices transform that dataset without changing its membership or causing network traffic.
-- **Room as trending source of truth:** observers receive one consistent ordered dataset, and cached content survives refresh failures.
-- **No generic `Base*` hierarchy:** there is no `BaseViewModel`, `BaseRepository`, or `BaseUseCase`; shared abstractions exist only where they express a real boundary such as the repository or data-source contracts.
+- **Koin as dependency injection:**keeps DI construction concise.
+- **Moderate modularization:** features and infrastructure have clear ownership without splitting every layer into tiny modules.
+- **Separate domain and UI models:** domain remains platform-independent while presentation can contain display-ready values.
+- **Repository-level error mapping:** technical exceptions do not leak into ViewModels.
+- **Local filtering and sorting:** the list always represents transformations of the same top 100 and does not make surprise network calls.
+- **Room as source of truth:** cached and freshly downloaded trending movies follow one consistent path into the UI.
+- **No generic `Base*` classes:** shared abstractions exist only when they describe a real boundary.
 
 ## Trade-offs
 
-- The cache is intentionally limited to weekly trending content rather than introducing a general synchronization engine.
-- Movie details remain network-only, keeping persistence focused but limiting offline detail access.
-- Cache freshness is a fixed one-hour policy rather than server-directed or endpoint-specific invalidation.
-- Genre data is fetched as part of a trending refresh and embedded in cached movie relationships; it is not maintained as an independently refreshed catalog.
-- Feature modules contain their presentation logic and UI together. Splitting each feature into separate API, domain, data, and UI modules would add build and ownership overhead without a current independent consumer.
-- Testing prioritizes repository rules, state transitions, formatting, important Compose states, and representative screen goldens. It does not attempt exhaustive device, performance, or end-to-end coverage.
-- The UI focuses on assignment-required content and accessible state handling rather than advanced motion, adaptive multi-pane layouts, or a fully branded component library.
+- The cache covers trending movies, not every endpoint.
+- Movie details remain network-only.
+- Cache freshness is a simple fixed one-hour policy.
+- Genres are refreshed with trending movies rather than maintained as a separate catalog.
+- Feature UI and presentation logic share one feature module. Separate feature API modules can be added if cross-feature dependencies appear.
+- Screenshot tests cover one representative loaded state per screen. Semantic tests cover loading, error, and interaction behavior.
+- The UI prioritizes the assignment flows and accessibility over a large branded component system or advanced animation.
 
-## Known Limitations
+## Known limitations
 
-- Movie-detail data is not cached, so the detail screen requires a successful network request.
-- Trending data has no scheduled/background refresh; refresh occurs when the ViewModel starts with stale data or when the user retries/refreshes.
-- TMDB language is currently fixed to `en-US`.
-- Filtering supports one genre at a time; there is no search or multi-genre query.
-- The app contains no paging UI because pagination is consumed internally to produce the fixed top-100 dataset.
-- Screenshot coverage is intentionally limited to one representative loaded state per screen; loading, errors, and interactions are covered by semantic Compose and instrumentation tests rather than additional goldens.
-- There are no performance benchmarks, analytics, crash reporting, or production observability integration.
-- The TMDB token is embedded in the built client through `BuildConfig` and can therefore be extracted from an APK; it is protected from source control, not from a determined client-side attacker.
+- Movie details require a network request because detail data is not persisted.
+- There is no scheduled or background refresh.
+- TMDB requests currently use the fixed `en-US` language.
+- Only one genre can be selected at a time.
+- There is no search or user-personalization flow.
+- There is no paging UI because TMDB pagination is consumed internally to build the fixed top 100.
+- Test coverage is broad but no percentage is measured.
+- The repository does not include production signing or store-distribution configuration.
+- There are no performance benchmarks, analytics, crash reporting, or production observability integrations.
+
